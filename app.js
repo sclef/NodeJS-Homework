@@ -5,13 +5,50 @@ const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const indexRouter = require('./routes/index');
 const newsRouter = require('./routes/news');
-let createError = require('http-errors');
+const userRouter = require('./routes/user');
+const createError = require('http-errors');
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+const userController = require('./private/controllers/usersController');
+const session = require("express-session");
+
+passport.use(new LocalStrategy(
+    function (username, password, cb) {
+        return userController.findUser(username, password, cb);
+    }));
+
+
+passport.serializeUser(function (user, done) {
+    done(null, user);
+});
+
+passport.deserializeUser(function (user, done) {
+    done(null, user);
+});
+
+
 
 const app = express();
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
+app.engine('html', require('ejs').renderFile);
+
+app.use(session({
+    secret: 'keyboard cat',
+    resave: false,
+    saveUninitialized: true,
+    cookie: {secure: false}
+}))
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+const mongoose = require('mongoose');
+mongoose.connect('mongodb://localhost/articles');
+const db = mongoose.connection;
+db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 
 app.use(logger('common', {
     stream: fs.createWriteStream('./requests.log', {flags: 'a'})
@@ -23,6 +60,7 @@ app.use(express.urlencoded({extended: false}));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use('/users', userRouter);
 app.use('/', indexRouter);
 app.use('/news', newsRouter);
 

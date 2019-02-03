@@ -1,98 +1,41 @@
-const fs = require('fs');
-const util = require('util');
-
-const readFileAsync = util.promisify(fs.readFile);
-const writeFileAsync = util.promisify(fs.writeFile);
-
-const filePath = './private/entities/articles.json';
+const Article = require('../models/article');
 
 var service = {};
 
-service.getArticles = async function (res) {
-    let articles = await getArticlesData();
-    res.send(articles);
+service.getArticles = async function() {
+    return await Article.find();
 }
 
-service.getArticle = async function (res, id) {
-    let articles = await getArticlesData();
-    let article = articles.filter(x => x.id == id)[0];
-    if (!article) {
-        res.statusCode = 404;
-        res.send({error: 'Not found'});
-    }
-    else {
-        res.send({status: 'OK', article: article});
-    }
+service.getArticle = async function(id) {
+    return await Article.findById(id);
 }
 
-service.createArticle = async function (res, body) {
-    let id = await getNewId();
-    let article = {
-        Id: id,
-        title: body.title,
-        author: body.author,
-        description: body.description,
-        url: body.images,
-        urlToImage: body.urlToImage
-    };
-    let articles = await getArticlesData();
-    articles.push(article);
-    await writeFileAsync(filePath, JSON.stringify({articles: articles, newId: ++id}));
+service.createArticle = async function(title) {
+    const article = new Article(title);
 
-    return res.send({status: 'OK', article: article});
-}
-
-service.updateArticle = async function (res, id, body) {
-    let articles = await getArticlesData();
-    let index = articles.findIndex(x => x.id == id);
-    if (!index) {
-        res.statusCode = 404;
-        return res.send({error: 'Not found'});
-    }
-    else {
-        articles[index] = {
-            title: body.title,
-            author: body.author,
-            description: body.description,
-            url: body.images,
-            urlToImage: body.urlToImage
-        };
-        await writeFileAsync(filePath, JSON.stringify({articles: articles, newId: getNewId()}));
-        return res.send({status: 'OK', article: article});
-    }
-}
-
-service.deleteArticle = async function (res, id) {
-    let content = await readFileAsync(filePath);
-    let result = JSON.parse(content)
-    for (var i = 0; i < result.articles.length; i++) {
-        if (result.articles[i].id == id) {
-            result.articles.splice(i, 1);
-
+    await article.save(function(err){
+        if (err) {
+            next(err);
         }
-    }
-
-    await writeFileAsync(filePath, JSON.stringify(result));
-
-    if (!result.articles) {
-        res.statusCode = 404;
-        return res.send({error: 'Not found'});
-    }
-    else {
-        return res.send({status: 'OK', articles: result.articles});
-    }
+    });
 }
 
-async function getArticlesData() {
-    let content = await readFileAsync(filePath);
-    let articles = JSON.parse(content).articles;
-    return articles;
-};
+service.updateArticle = async function(id, title) {
+    return await Article.findByIdAndUpdate(id, { title: title }, function(err) {
+        if (err) {
+            console.log(err);
+            next(err);
+        }
+    })
+}
 
-async function getNewId() {
-    let content = await readFileAsync(filePath);
-    let newId = JSON.parse(content).newId;
-    return newId;
-};
+service.deleteArticle = async function(id) {
+    return await Article.findByIdAndDelete(id, function(err) {
+        if (err) {
+            console.log(err);
+            next(err);
+        }
+    })
+}
 
 module.exports = service;
