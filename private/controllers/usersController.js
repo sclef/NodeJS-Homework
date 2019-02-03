@@ -17,4 +17,15 @@ controller.registerUser = function (req, res, next) {
         });
 }
 
+controller.findOrCreate = function (profile, next) {
+    // if(usersService.getUser(profile.userName, password)){
+
+    // }
+    // usersService.createUser(req.body.username, req.body.password)
+    //     .then(() => {
+    //         res.status(200).send('User registered');
+    //     });
+}
+
+
 module.exports = controller

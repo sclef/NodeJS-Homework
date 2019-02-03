@@ -9,6 +9,7 @@ const userRouter = require('./routes/user');
 const createError = require('http-errors');
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
+const FacebookStrategy = require('passport-facebook').Strategy;
 const userController = require('./private/controllers/usersController');
 const session = require("express-session");
 
@@ -17,6 +18,17 @@ passport.use(new LocalStrategy(
         return userController.findUser(username, password, cb);
     }));
 
+passport.use(new FacebookStrategy({
+    clientID: "1232768783564876",
+    clientSecret: "0acd1d80e3a2d3a488d3baf3f75a3b43",
+    callbackURL: "http://localhost:3000/auth/facebook/callback"
+},
+    function (accessToken, refreshToken, profile, cb) {
+        userController.findOrCreate(profile, function (err, user) {
+            return cb(err, user);
+        });
+    }
+));
 
 passport.serializeUser(function (user, done) {
     done(null, user);
@@ -64,6 +76,17 @@ app.use('/users', userRouter);
 app.use('/', indexRouter);
 app.use('/news', newsRouter);
 
+app.get('/auth/facebook',
+  passport.authenticate('facebook'));
+
+app.get('/auth/facebook/callback',
+  passport.authenticate('facebook', { failureRedirect: '/login' }),
+  function(req, res) {
+    // Successful authentication, redirect home.
+    res.redirect('/');
+  });
+
+
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
     next(createError(404));
@@ -79,5 +102,6 @@ app.use(function (err, req, res, next) {
     res.status(err.status || 500);
     res.render('error');
 });
+
 
 module.exports = app;
